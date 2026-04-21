@@ -4,7 +4,7 @@
 
 Mythos Orb is a dashboard built to transform the raw engineering logs of [Mythos Router](https://github.com/thewaltero/mythos-router) into an accessible, searchable, and readable engineering trace. 
 
-It provides real-time insights into adaptive thinking buffers, reality-alignment checks, and codebase mutations—effectively serving as the "flight recorder" for your AI-augmented development sessions.
+It provides real-time insights into adaptive thinking buffers, reality-alignment checks, and codebase mutations effectively serving as the recorder for your AI-augmented development sessions.
 
 ![Mythos Orb Desktop Interface](./public/hero.png)
 
@@ -13,17 +13,17 @@ It provides real-time insights into adaptive thinking buffers, reality-alignment
 ##  Core Systems
 
 ### 1. Engineering Trace Exploration
-Navigate through sessions with millisecond precision. Every action, verification, and drift detection event is indexed and presented in a sleek, interactive timeline.
+Navigate through sessions with millisecond precision. Every action, verification, and drift detection event is indexed and presented in a interactive timeline.
 
 ![Session Trace View](./public/trace-view.png)
 
-### 2. High-Fidelity Diff Visualization
-Integrated with Git and the Mythos `SWD` (Strict Write Discipline) protocol, the Orb provides side-by-side diffs that visualize exactly how the model is proposing to mutate your codebase before any write hits the disk.
+### 2. Diff Visualization
+Integrated with Git and the Mythos Strict Write Discipline protocol, the Orb provides side by side diffs that visualize exactly how the model is proposing to mutate your codebase before any write hits the disk.
 
 ![Diff Visualization](./public/diff-view.png)
 
 ### 3. Adaptive Thinking Monitor
-Watch the model's internal "thinking" state. The Orb surfaces the reasoning steps that lead to specific architectural decisions, giving you full visibility into the "black box" of agentic routing.
+Watch the models internal "thinking" state. The Orb surfaces the reasoning steps that lead to specific architectural decisions, giving you full visibility into the "black box" of agentic routing.
 
 ---
 
