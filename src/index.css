@@ -1,0 +1,244 @@
+@import "tailwindcss";
+
+:root {
+  /* Branding Palette from mythos-router landing page */
+  --bg-primary: #06060b;
+  --bg-secondary: #0c0c14;
+  --bg-surface: #111119;
+  --bg-surface-hover: #16161f;
+  
+  --accent: #cc785c;
+  --accent-light: #e09070;
+  --accent-glow: rgba(204, 120, 92, 0.15);
+  
+  --text-primary: #e8e8ec;
+  --text-secondary: #8b8b9e;
+  --text-muted: #5a5a6e;
+  
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-medium: rgba(255, 255, 255, 0.1);
+
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: dark;
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  min-width: 320px;
+  background: radial-gradient(circle at 50% 0%, #1a100d 0%, var(--bg-primary) 100%);
+}
+
+#root {
+  width: 100%;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-medium);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Glassmorphism */
+.glass {
+  background: rgba(6, 6, 11, 0.7);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle);
+}
+
+.glass-card {
+  background: var(--bg-surface);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.glass-card:hover {
+  border-color: var(--border-medium);
+  background: var(--bg-surface-hover);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Accent highlight - Toned down slightly */
+.session-active {
+  background: linear-gradient(90deg, rgba(204, 120, 92, 0.05) 0%, rgba(204, 120, 92, 0) 100%);
+  border-left: 2px solid rgba(204, 120, 92, 0.6) !important;
+}
+
+.diff-code-empty {
+  background-image: linear-gradient(135deg, rgba(255,255,255,0.01) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.01) 50%, rgba(255,255,255,0.01) 75%, transparent 75%, transparent) !important;
+  background-size: 8px 8px !important;
+  position: relative;
+}
+
+.diff-code-empty::after {
+  content: "NULL STATE";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  color: rgba(255,255,255,0.025);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.diff-view {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+}
+
+/* Custom styles for the accordion */
+.accordion-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out, opacity 0.2s ease-out;
+  opacity: 0;
+}
+
+.accordion-expanded {
+  max-height: 500px;
+  opacity: 1;
+}
+
+/* React Diff View Deep Theme Overrides */
+.diff {
+  background-color: transparent !important;
+  color: #e2e8f0 !important;
+  border: none !important;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+}
+
+.diff-gutter {
+  background-color: rgba(0, 0, 0, 0.3) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+  color: #475569 !important;
+  min-width: 44px !important;
+  text-align: right !important;
+  padding-right: 12px !important;
+}
+
+.diff-gutter-col {
+  width: 44px !important;
+}
+
+/* Hardened Diff Colors (Maroon/Forest) */
+.diff-code-insert {
+  background-color: rgba(16, 185, 129, 0.08) !important;
+  color: #a7f3d0 !important;
+}
+
+.diff-gutter-insert {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  color: #10b981 !important;
+  border-right: 2px solid #10b981 !important;
+}
+
+.diff-code-delete {
+  background-color: rgba(244, 63, 94, 0.08) !important;
+  color: #fca5a5 !important;
+}
+
+.diff-gutter-delete {
+  background-color: rgba(244, 63, 94, 0.15) !important;
+  color: #f43f5e !important;
+  border-right: 2px solid #f43f5e !important;
+}
+
+/* Syntax Highlighting (Prism Integration) */
+.diff-code .token.comment,
+.diff-code .token.prolog,
+.diff-code .token.doctype,
+.diff-code .token.cdata { color: #6272a4; }
+
+.diff-code .token.punctuation { color: #f8f8f2; }
+
+.diff-code .token.namespace { opacity: .7; }
+
+.diff-code .token.property,
+.diff-code .token.tag,
+.diff-code .token.constant,
+.diff-code .token.symbol,
+.diff-code .token.deleted { color: #ff79c6; }
+
+.diff-code .token.boolean,
+.diff-code .token.number { color: #bd93f9; }
+
+.diff-code .token.selector,
+.diff-code .token.attr-name,
+.diff-code .token.string,
+.diff-code .token.char,
+.diff-code .token.builtin,
+.diff-code .token.inserted { color: #f1fa8c; }
+
+.diff-code .token.operator,
+.diff-code .token.entity,
+.diff-code .token.url,
+.language-css .token.string,
+.style .token.string,
+.diff-code .token.variable { color: #8be9fd; }
+
+.diff-code .token.atrule,
+.diff-code .token.attr-value,
+.diff-code .token.function,
+.diff-code .token.class-name { color: #50fa7b; }
+
+.diff-code .token.keyword { color: #ff79c6; font-style: italic; }
+
+.diff-code .token.regex,
+.diff-code .token.important { color: #f1fa8c; }
+
+.diff-hunk-header {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+  color: #64748b !important;
+  font-size: 11px !important;
+  padding: 6px 12px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.diff-hunk-header-content {
+  font-weight: 800 !important;
+  font-family: inherit !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+}

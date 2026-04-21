@@ -1,0 +1,148 @@
+import fastify from 'fastify';
+import cors from '@fastify/cors';
+import fastifyStatic from '@fastify/static';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawn, execSync } from 'node:child_process';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Portability: Allow overriding memory path & port via ENV for standalone use
+const MEMORY_PATH = process.env.MEMORY_PATH || 
+                  (fs.existsSync(path.resolve(__dirname, '../MEMORY.md')) 
+                    ? path.resolve(__dirname, '../MEMORY.md') 
+                    : path.resolve(__dirname, 'MEMORY.md'));
+
+const REPO_ROOT = process.env.REPO_ROOT || path.dirname(MEMORY_PATH);
+const PORT = process.env.PORT || 3333;
+
+const server = fastify({ logger: false });
+
+server.register(cors);
+
+// Serve the production build if it exists
+server.register(fastifyStatic, {
+  root: path.join(__dirname, 'dist'),
+  prefix: '/',
+});
+
+/**
+ * Parsed memory structure
+ */
+function parseMemory() {
+  if (!fs.existsSync(MEMORY_PATH)) return [];
+  const content = fs.readFileSync(MEMORY_PATH, 'utf-8');
+  const lines = content.split('\n');
+
+  const sessions = [];
+  let currentSession = null;
+  let metadataBlock = [];
+  let isParsingMeta = false;
+  let rawLines = [];
+
+  for (const line of lines) {
+    if (line.includes('<!-- mythos:meta')) {
+      isParsingMeta = true;
+      metadataBlock = [];
+      continue;
+    }
+
+    if (isParsingMeta && line.includes('-->')) {
+      isParsingMeta = false;
+      const meta = {};
+      metadataBlock.forEach(m => {
+        const [k, v] = m.split('=');
+        if (k && v) meta[k.trim()] = v.trim();
+      });
+      if (currentSession) {
+        currentSession.metadata = meta;
+        currentSession.rawContent = rawLines.join('\n');
+        sessions.push(currentSession);
+        currentSession = null;
+        rawLines = [];
+      }
+      continue;
+    }
+
+    if (isParsingMeta) {
+      metadataBlock.push(line);
+      continue;
+    }
+
+    rawLines.push(line);
+
+    if (line.startsWith('|') && !line.includes('---') && !line.includes('Timestamp')) {
+      const parts = line.split('|').map(p => p.trim());
+      if (parts.length >= 4) {
+        const ts = parts[1] || '';
+        const action = parts[2] || '';
+        const result = parts[3] || '';
+
+        if (!currentSession) {
+          currentSession = {
+            id: Date.now() + Math.random(),
+            entries: [],
+            timestamp_start: ts,
+            metadata: {}
+          };
+        }
+        currentSession.entries.push({
+          timestamp: ts,
+          action: action,
+          result: result
+        });
+      }
+    }
+  }
+
+  return sessions.reverse();
+}
+
+/**
+ * Endpoints
+ */
+server.get('/api/sessions', async () => {
+  return parseMemory();
+});
+
+server.get('/api/diff', async (request, reply) => {
+  const { hash } = request.query;
+  if (!hash || !/^[a-f0-9]{7,40}$/.test(hash)) {
+    return reply.status(400).send({ error: 'Invalid commit hash' });
+  }
+
+  return new Promise((resolve) => {
+    const git = spawn('git', ['show', '--format=', hash], { cwd: REPO_ROOT });
+    let stdout = '';
+    git.stdout.on('data', (data) => stdout += data);
+    git.on('close', () => resolve(stdout));
+  });
+});
+
+server.post('/api/open', async (request, reply) => {
+  const { filePath } = request.body;
+  const target = filePath ? path.resolve(REPO_ROOT, filePath) : REPO_ROOT;
+
+  try {
+    if (!target.startsWith(REPO_ROOT)) {
+      return reply.status(403).send({ error: 'Access denied' });
+    }
+    execSync(`start "" "${target}"`);
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+const start = async () => {
+  try {
+    await server.listen({ port: PORT, host: '127.0.0.1' });
+    console.log(`\n🚀 Mythos Orb active at http://127.0.0.1:${PORT}`);
+  } catch (err) {
+    server.log.error(err);
+    process.exit(1);
+  }
+};
+
+start();
