@@ -58,7 +58,7 @@ export const DiffView: React.FC<DiffViewProps> = ({ diffText }) => {
               </div>
             </div>
             <div className="p-2 bg-black/20">
-              <Diff viewType="split" diffType={type} hunks={hunks}>
+              <Diff viewType="split" diffType={type} hunks={hunks} tokens={tokens || undefined}>
                 {(hunks) => hunks.map((hunk) => <Hunk key={hunk.content} hunk={hunk} />)}
               </Diff>
             </div>
