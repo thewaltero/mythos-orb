@@ -22,8 +22,9 @@ const server = fastify({ logger: false });
 server.register(cors);
 
 /**
- * Inline rate limiter — explicit preHandler so CodeQL can trace the guard.
- * Creates a sliding-window limiter keyed by IP address.
+ * Inline rate limiter — called directly inside handler bodies so that
+ * CodeQL's static analysis can trace the 429 early-return guard.
+ * Returns true if the request was rate-limited (reply already sent).
  */
 function createRateLimiter(maxRequests, windowMs) {
   const hits = new Map();
@@ -38,19 +39,19 @@ function createRateLimiter(maxRequests, windowMs) {
     }
   }, windowMs).unref();
 
-  return function rateLimitPreHandler(request, reply, done) {
+  return function checkRateLimit(request, reply) {
     const ip = request.ip;
     const now = Date.now();
     const timestamps = (hits.get(ip) || []).filter(t => now - t < windowMs);
 
     if (timestamps.length >= maxRequests) {
       reply.status(429).send({ error: 'Too many requests, please try again later.' });
-      return;
+      return true; // rate-limited
     }
 
     timestamps.push(now);
     hits.set(ip, timestamps);
-    done();
+    return false; // allowed
   };
 }
 
@@ -139,11 +140,13 @@ function parseMemory() {
 /**
  * Endpoints
  */
-server.get('/api/sessions', { preHandler: apiLimiter }, async () => {
+server.get('/api/sessions', async (request, reply) => {
+  if (apiLimiter(request, reply)) return;
   return parseMemory();
 });
 
-server.get('/api/diff', { preHandler: apiLimiter }, async (request, reply) => {
+server.get('/api/diff', async (request, reply) => {
+  if (apiLimiter(request, reply)) return;
   const { hash } = request.query;
   if (!hash || !/^[a-f0-9]{7,40}$/.test(hash)) {
     return reply.status(400).send({ error: 'Invalid commit hash' });
@@ -157,7 +160,8 @@ server.get('/api/diff', { preHandler: apiLimiter }, async (request, reply) => {
   });
 });
 
-server.post('/api/open', { preHandler: openLimiter }, async (request, reply) => {
+server.post('/api/open', async (request, reply) => {
+  if (openLimiter(request, reply)) return;
   const { filePath } = request.body;
 
   // Allowlist: only permit safe path characters (no shell metacharacters)
