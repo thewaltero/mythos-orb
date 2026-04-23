@@ -1,6 +1,5 @@
 import fastify from 'fastify';
 import cors from '@fastify/cors';
-import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -22,11 +21,42 @@ const server = fastify({ logger: false });
 
 server.register(cors);
 
-// Rate limiting: 100 requests per minute per IP (global default)
-await server.register(rateLimit, {
-  max: 100,
-  timeWindow: '1 minute',
-});
+/**
+ * Inline rate limiter — explicit preHandler so CodeQL can trace the guard.
+ * Creates a sliding-window limiter keyed by IP address.
+ */
+function createRateLimiter(maxRequests, windowMs) {
+  const hits = new Map();
+
+  // Periodically purge expired entries to prevent memory leaks
+  setInterval(() => {
+    const now = Date.now();
+    for (const [ip, timestamps] of hits) {
+      const valid = timestamps.filter(t => now - t < windowMs);
+      if (valid.length === 0) hits.delete(ip);
+      else hits.set(ip, valid);
+    }
+  }, windowMs).unref();
+
+  return function rateLimitPreHandler(request, reply, done) {
+    const ip = request.ip;
+    const now = Date.now();
+    const timestamps = (hits.get(ip) || []).filter(t => now - t < windowMs);
+
+    if (timestamps.length >= maxRequests) {
+      reply.status(429).send({ error: 'Too many requests, please try again later.' });
+      return;
+    }
+
+    timestamps.push(now);
+    hits.set(ip, timestamps);
+    done();
+  };
+}
+
+// Rate limiters for API routes
+const apiLimiter = createRateLimiter(100, 60 * 1000);     // 100 req/min
+const openLimiter = createRateLimiter(10, 60 * 1000);     // 10 req/min
 
 // Serve the production build if it exists
 server.register(fastifyStatic, {
@@ -109,11 +139,11 @@ function parseMemory() {
 /**
  * Endpoints
  */
-server.get('/api/sessions', async () => {
+server.get('/api/sessions', { preHandler: apiLimiter }, async () => {
   return parseMemory();
 });
 
-server.get('/api/diff', async (request, reply) => {
+server.get('/api/diff', { preHandler: apiLimiter }, async (request, reply) => {
   const { hash } = request.query;
   if (!hash || !/^[a-f0-9]{7,40}$/.test(hash)) {
     return reply.status(400).send({ error: 'Invalid commit hash' });
@@ -127,14 +157,7 @@ server.get('/api/diff', async (request, reply) => {
   });
 });
 
-server.post('/api/open', {
-  config: {
-    rateLimit: {
-      max: 10,
-      timeWindow: '1 minute',
-    },
-  },
-}, async (request, reply) => {
+server.post('/api/open', { preHandler: openLimiter }, async (request, reply) => {
   const { filePath } = request.body;
 
   // Allowlist: only permit safe path characters (no shell metacharacters)
