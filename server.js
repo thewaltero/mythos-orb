@@ -141,12 +141,12 @@ server.post('/api/open', async (request, reply) => {
       return reply.status(404).send({ error: 'File not found' });
     }
 
-    // Safe: arguments passed as array elements, never shell-interpolated
-    const child = spawn('cmd.exe', ['/c', 'start', '', target], {
+    // Safe: explorer.exe is not a shell — no command-line interpretation occurs.
+    // The target path is passed as a direct argument to a GUI executable.
+    const child = spawn('explorer.exe', [target], {
       cwd: REPO_ROOT,
       stdio: 'ignore',
       detached: true,
-      windowsVerbatimArguments: true,
     });
     child.unref();
     return { success: true };
