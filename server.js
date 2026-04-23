@@ -4,7 +4,7 @@ import fastifyStatic from '@fastify/static';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { spawn, execSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -128,7 +128,14 @@ server.post('/api/open', async (request, reply) => {
     if (!target.startsWith(REPO_ROOT)) {
       return reply.status(403).send({ error: 'Access denied' });
     }
-    execSync(`start "" "${target}"`);
+    const child = spawn('cmd.exe', ['/c', 'start', '',
+target], {
+      cwd: REPO_ROOT,
+      stdio: 'ignore',
+      detached: true,
+      windowsVerbatimArguments: true,
+    });
+    child.unref();
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };
