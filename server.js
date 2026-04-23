@@ -57,7 +57,6 @@ function createRateLimiter(maxRequests, windowMs) {
 
 // Rate limiter for read-only API routes
 const apiLimiter = createRateLimiter(100, 60 * 1000);     // 100 req/min
-const openLimiter = createRateLimiter(10, 60 * 1000);     // 10 req/min
 
 // Serve the production build if it exists
 server.register(fastifyStatic, {
@@ -140,21 +139,13 @@ function parseMemory() {
 /**
  * Endpoints
  */
-server.get('/api/sessions', {
-  preHandler: (request, reply, done) => {
-    if (apiLimiter(request, reply)) return;
-    done();
-  }
-}, async () => {
+server.get('/api/sessions', async (request, reply) => {
+  if (apiLimiter(request, reply)) return;
   return parseMemory();
 });
 
-server.get('/api/diff', {
-  preHandler: (request, reply, done) => {
-    if (apiLimiter(request, reply)) return;
-    done();
-  }
-}, async (request, reply) => {
+server.get('/api/diff', async (request, reply) => {
+  if (apiLimiter(request, reply)) return;
   const { hash } = request.query;
   if (!hash || !/^[a-f0-9]{7,40}$/.test(hash)) {
     return reply.status(400).send({ error: 'Invalid commit hash' });
@@ -168,15 +159,25 @@ server.get('/api/diff', {
   });
 });
 
-server.post(
-  '/api/open',
-  {
-    preHandler: (request, reply, done) => {
-      if (openLimiter(request, reply)) return;
-      done();
-    },
-  },
-  async (request, reply) => {
+// Dedicated rate-limit state for /api/open (inlined so CodeQL can trace it)
+const openRateLimitHits = new Map();
+const OPEN_RATE_LIMIT_MAX = 10;
+const OPEN_RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+
+server.post('/api/open', async (request, reply) => {
+  // --- Inline rate limiting (10 req/min per IP) ---
+  const ip = request.ip;
+  const now = Date.now();
+  const recentHits = (openRateLimitHits.get(ip) || []).filter(
+    t => now - t < OPEN_RATE_LIMIT_WINDOW
+  );
+  if (recentHits.length >= OPEN_RATE_LIMIT_MAX) {
+    return reply.status(429).send({ error: 'Too many requests, please try again later.' });
+  }
+  recentHits.push(now);
+  openRateLimitHits.set(ip, recentHits);
+  // --- End rate limiting ---
+
   const { filePath } = request.body;
 
   // Allowlist: only permit safe path characters (no shell metacharacters)
