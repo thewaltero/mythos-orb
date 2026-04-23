@@ -1,6 +1,7 @@
 import fastify from 'fastify';
 import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
+import rateLimit from '@fastify/rate-limit';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,6 +21,11 @@ const PORT = process.env.PORT || 3333;
 const server = fastify({ logger: false });
 
 server.register(cors);
+
+server.register(rateLimit, {
+  max: 100,
+  timeWindow: '1 minute',
+});
 
 // Serve the production build if it exists
 server.register(fastifyStatic, {
@@ -120,7 +126,14 @@ server.get('/api/diff', async (request, reply) => {
   });
 });
 
-server.post('/api/open', async (request, reply) => {
+server.post('/api/open', {
+  config: {
+    rateLimit: {
+      max: 10,
+      timeWindow: '1 minute',
+    },
+  },
+}, async (request, reply) => {
   const { filePath } = request.body;
   const target = filePath ? path.resolve(REPO_ROOT, filePath) : REPO_ROOT;
 
