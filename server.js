@@ -1,7 +1,6 @@
 import fastify from 'fastify';
 import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
-import rateLimit from '@fastify/rate-limit';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -21,11 +20,6 @@ const PORT = process.env.PORT || 3333;
 const server = fastify({ logger: false });
 
 server.register(cors);
-
-server.register(rateLimit, {
-  max: 100,
-  timeWindow: '1 minute',
-});
 
 // Serve the production build if it exists
 server.register(fastifyStatic, {
@@ -126,23 +120,29 @@ server.get('/api/diff', async (request, reply) => {
   });
 });
 
-server.post('/api/open', {
-  config: {
-    rateLimit: {
-      max: 10,
-      timeWindow: '1 minute',
-    },
-  },
-}, async (request, reply) => {
+server.post('/api/open', async (request, reply) => {
   const { filePath } = request.body;
+
+  // Allowlist: only permit safe path characters (no shell metacharacters)
+  if (filePath && !/^[\w.\-\/\\ :]+$/.test(filePath)) {
+    return reply.status(400).send({ error: 'Invalid file path characters' });
+  }
+
   const target = filePath ? path.resolve(REPO_ROOT, filePath) : REPO_ROOT;
 
   try {
+    // Path-traversal guard: resolved path must stay within REPO_ROOT
     if (!target.startsWith(REPO_ROOT)) {
       return reply.status(403).send({ error: 'Access denied' });
     }
-    const child = spawn('cmd.exe', ['/c', 'start', '',
-target], {
+
+    // Verify the path actually exists before opening
+    if (!fs.existsSync(target)) {
+      return reply.status(404).send({ error: 'File not found' });
+    }
+
+    // Safe: arguments passed as array elements, never shell-interpolated
+    const child = spawn('cmd.exe', ['/c', 'start', '', target], {
       cwd: REPO_ROOT,
       stdio: 'ignore',
       detached: true,
