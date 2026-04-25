@@ -176,6 +176,7 @@ server.post(
     },
   },
   async (request, reply) => {
+    if (apiLimiter(request, reply)) return;
 
     const { filePath } = request.body;
 
