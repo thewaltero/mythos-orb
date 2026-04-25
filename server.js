@@ -169,6 +169,11 @@ await server.register(rateLimit, {
 server.post(
   '/api/open',
   {
+    preHandler: server.rateLimit({
+      global: false,
+      max: 10,
+      timeWindow: '1 minute',
+    }),
     rateLimit: {
       global: false,
       max: 10,
