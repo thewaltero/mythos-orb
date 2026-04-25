@@ -169,15 +169,13 @@ await server.register(rateLimit, {
 server.post(
   '/api/open',
   {
-      rateLimit: {
-        max: 10,
-        timeWindow: '1 minute',
-
+    rateLimit: {
+      global: false,
+      max: 10,
+      timeWindow: '1 minute',
     },
   },
   async (request, reply) => {
-    if (apiLimiter(request, reply)) return;
-
     const { filePath } = request.body;
 
   // Allowlist: only permit safe path characters (no shell metacharacters)
