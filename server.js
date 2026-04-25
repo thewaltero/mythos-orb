@@ -159,26 +159,20 @@ server.get('/api/diff', async (request, reply) => {
   });
 });
 
-// Dedicated rate-limit state for /api/open (inlined so CodeQL can trace it)
-const openRateLimitHits = new Map();
-const OPEN_RATE_LIMIT_MAX = 10;
-const OPEN_RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+// Dedicated rate limiter for /api/open
+const openLimiter = createRateLimiter(10, 60 * 1000); // 10 req/min
+server.post(
+  '/api/open',
+  {
+    preHandler: (request, reply, done) => {
+      if (openLimiter(request, reply)) return;
 
-server.post('/api/open', async (request, reply) => {
-  // --- Inline rate limiting (10 req/min per IP) ---
-  const ip = request.ip;
-  const now = Date.now();
-  const recentHits = (openRateLimitHits.get(ip) || []).filter(
-    t => now - t < OPEN_RATE_LIMIT_WINDOW
-  );
-  if (recentHits.length >= OPEN_RATE_LIMIT_MAX) {
-    return reply.status(429).send({ error: 'Too many requests, please try again later.' });
-  }
-  recentHits.push(now);
-  openRateLimitHits.set(ip, recentHits);
-  // --- End rate limiting ---
+      done();
+    },
+  },
+  async (request, reply) => {
 
-  const { filePath } = request.body;
+    const { filePath } = request.body;
 
   // Allowlist: only permit safe path characters (no shell metacharacters)
   if (filePath && !/^[\w.\-\/\\ :]+$/.test(filePath)) {
