@@ -169,11 +169,10 @@ await server.register(rateLimit, {
 server.post(
   '/api/open',
   {
-    config: {
       rateLimit: {
         max: 10,
         timeWindow: '1 minute',
-      },
+
     },
   },
   async (request, reply) => {
