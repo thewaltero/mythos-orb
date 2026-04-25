@@ -1,6 +1,7 @@
 import fastify from 'fastify';
 import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
+import rateLimit from '@fastify/rate-limit';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -159,15 +160,20 @@ server.get('/api/diff', async (request, reply) => {
   });
 });
 
+await server.register(rateLimit, {
+  max: 1000,
+  timeWindow: '1 minute',
+});
+
 // Dedicated rate limiter for /api/open
-const openLimiter = createRateLimiter(10, 60 * 1000); // 10 req/min
 server.post(
   '/api/open',
   {
-    preHandler: (request, reply, done) => {
-      if (openLimiter(request, reply)) return;
-
-      done();
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '1 minute',
+      },
     },
   },
   async (request, reply) => {
