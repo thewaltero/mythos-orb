@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { fetchSessions, fetchDiff, type Session, type SessionEntry } from './api';
 import {
   History,
@@ -67,23 +67,7 @@ export default function App() {
 
   const diffRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    loadSessions();
-  }, []);
-
-  async function loadSessions() {
-    try {
-      const data = await fetchSessions();
-      setSessions(data);
-      if (data.length > 0) handleSelectSession(data[0]);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleSelectSession(s: Session) {
+  const handleSelectSession = useCallback(async (s: Session) => {
     setSelectedSession(s);
     setDiffData(null);
     setExpandedGroupId(null);
@@ -95,7 +79,23 @@ export default function App() {
         console.error(err);
       }
     }
-  }
+  }, []);
+
+  const loadSessions = useCallback(async () => {
+    try {
+      const data = await fetchSessions();
+      setSessions(data);
+      if (data.length > 0) handleSelectSession(data[0]);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [handleSelectSession]);
+
+  useEffect(() => {
+    loadSessions();
+  }, [loadSessions]);
 
   function scrollToDiff() {
     diffRef.current?.scrollIntoView({ behavior: 'smooth' });
