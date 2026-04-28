@@ -14,7 +14,16 @@ interface DiffViewProps {
   diffText: string;
 }
 
-const DiffFile = ({ oldPath, newPath, hunks, type }: any) => {
+type HunkType = { content: string } & Record<string, unknown>;
+
+interface DiffFileProps {
+  oldPath?: string;
+  newPath?: string;
+  hunks?: HunkType[];
+  type?: string;
+}
+
+const DiffFile = ({ oldPath, newPath, hunks, type }: DiffFileProps) => {
   const lang = (newPath || oldPath || '').split('.').pop() || 'javascript';
   
   // Use Memoized tokens for performance
@@ -46,7 +55,7 @@ const DiffFile = ({ oldPath, newPath, hunks, type }: any) => {
       </div>
       <div className="p-2 bg-black/20">
         <Diff viewType="split" diffType={type} hunks={hunks} tokens={tokens || undefined}>
-          {(hunks: any[]) => hunks.map((hunk: any) => <Hunk key={hunk.content} hunk={hunk} />)}
+          {(hunks: HunkType[] = []) => hunks.map((hunk: HunkType) => <Hunk key={hunk.content} hunk={hunk as never} />)}
         </Diff>
       </div>
     </div>
